@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#101426">
+<title>Studio Savoir & Animation</title>
+<style>
+:root{color-scheme:dark;--bg:#101426;--card:#1c233a;--line:#303a59;--purple:#7958ff;--text:#fff;--muted:#c0c8e2}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+header{padding:22px 18px;background:linear-gradient(135deg,#673de6,#1479e8);border-radius:0 0 24px 24px}
+header h1{font-size:24px;margin:0 0 6px}
+main{padding:16px;max-width:720px;margin:auto}
+.card{background:var(--card);padding:18px;border-radius:16px;margin-bottom:16px;border:1px solid var(--line)}
+label{display:block;margin:14px 0 7px;font-weight:bold}
+textarea,select{width:100%;padding:12px;border-radius:10px;border:1px solid #475273;background:#11182b;color:white;font-size:16px}
+textarea{min-height:90px}
+button,.link{display:block;width:100%;border:0;border-radius:10px;padding:14px;background:var(--purple);color:white;font-size:16px;font-weight:bold;margin-top:12px;text-align:center;text-decoration:none;cursor:pointer}
+button.secondary{background:#29324f;border:1px solid #4a5679}
+button:disabled{opacity:.5}
+.small{font-size:13px;color:var(--muted)}
+.notice{padding:12px;border-left:3px solid #9b87ff;background:#151b30;border-radius:8px;font-size:13px}
+#galerie{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+#galerie img{width:100%;border-radius:8px;aspect-ratio:1;object-fit:cover;cursor:pointer}
+canvas,video{width:100%;max-height:70vh;border-radius:12px;background:#000;margin-top:12px;object-fit:contain}
+</style>
+</head>
+<body>
+<header>
+<h1>🎬 Studio Savoir & Animation</h1>
+<p>Écris ton histoire : l’appli fabrique la vidéo.</p>
+</header>
+<main>
+<section class="card">
+<h2>1. Ton histoire</h2>
+<label for="idee">Idée</label>
+<textarea id="idee" placeholder="Ex. : un petit robot découvre une forêt magique"></textarea>
+<label for="narration">Texte de narration (facultatif)</label>
+<textarea id="narration" placeholder="Laisse vide pour reprendre ton idée"></textarea>
+<label for="style">Style</label>
+<select id="style">
+<option>Science-fiction cinématographique</option>
+<option>Dessin animé 3D</option>
+<option>Documentaire réaliste</option>
+<option>Aventure fantastique</option>
+<option>Éducatif, illustration claire</option>
+<option>Aquarelle poétique</option>
+<option>Manga</option>
+<option>Film d’horreur léger</option>
+<option>Conte pour enfants</option>
+</select>
+<label for="duree">Durée totale</label>
+<select id="duree">
+<option value="15">15 secondes</option>
+<option value="30" selected>30 secondes</option>
+<option value="60">1 minute</option>
+</select>
+<label for="dimg">Durée de chaque image</label>
+<select id="dimg">
+<option value="3">3 secondes (plus d’images)</option>
+<option value="5" selected>5 secondes</option>
+<option value="8">8 secondes (moins d’images)</option>
+</select>
+<label for="format">Format</label>
+<select id="format">
+<option value="v">Vertical 9:16</option>
+<option value="h">Horizontal 16:9</option>
+<option value="c">Carré 1:1</option>
+</select>
+<label for="mouvement">Mouvement des images</label>
+<select id="mouvement">
+<option value="zin">Zoom avant</option>
+<option value="zout">Zoom arrière</option>
+<option value="pan">Glissement</option>
+<option value="non">Aucun</option>
+</select>
+<label for="soustitres">Sous-titres</label>
+<select id="soustitres">
+<option value="1">Oui</option>
+<option value="0">Non</option>
+</select>
+<label for="voix">Voix française</label>
+<select id="voix"><option value="">Automatique</option></select>
+<label for="vitesse">Vitesse de la voix</label>
+<select id="vitesse">
+<option value="0.8">Lente</option>
+<option value="1" selected>Normale</option>
+<option value="1.2">Rapide</option>
+</select>
+<button id="creer">✨ Créer les images IA</button>
+<button class="secondary arret" style="display:none">✖ Annuler</button>
+<p id="statut" class="small" role="status"></p>
+<div id="galerie"></div>
+<p class="notice">Une image est créée toutes les 15 secondes environ. Garde l’appli ouverte. Touche une image pour la refaire si elle ne te plaît pas.</p>
+</section>
+<section class="card" id="montage" hidden>
+<h2>2. Ta vidéo</h2>
+<button id="voir">▶ Voir avec la narration française</button>
+<button id="fabriquer" class="secondary">🎞️ Fabriquer le fichier vidéo</button>
+<button class="secondary arret" style="display:none">⏹ Arrêter</button>
+<canvas id="cv" width="540" height="960"></canvas>
+<div id="resultat"></div>
+<p class="notice">Le fichier vidéo est sans voix (Android ne permet pas d’enregistrer la voix de synthèse). Ajoute la narration dans CapCut, ou utilise « Voir avec la narration ».</p>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const st=t=>{$('statut').textContent=t;};
+const ACT=["présenter le lieu et l’ambiance","le personnage principal en mouvement","un indice mystérieux apparaît","le personnage s’approche de l’indice","un événement inattendu","un lieu ou un objet important révélé","la réaction du personnage","la tension monte","un nouvel obstacle","une décision courageuse","une conséquence surprenante","une image finale mémorable"];
+const CH=['idee','narration','style','duree','dimg','format','mouvement','soustitres','vitesse'];
+let scenes=[],P=null,occupe=false,annule=false,wl=null;
+const dim=()=>({v:[540,960],h:[960,540],c:[720,720]}[$('format').value]||[540,960]);
+const attendre=ms=>new Promise(r=>setTimeout(r,ms));
+async function pause(ms){for(let k=0;k<ms/500&&!annule;k++)await attendre(500);}
+function sauver(){try{const o={};CH.forEach(k=>o[k]=$(k).value);localStorage.setItem('ssa_v4',JSON.stringify(o));}catch(e){}}
+function restaurer(){try{const o=JSON.parse(localStorage.getItem('ssa_v4')||'{}');CH.forEach(k=>{if(o[k]!==undefined)$(k).value=o[k];});}catch(e){}}
+function voix(){
+if(!window.speechSynthesis)return;
+const cur=$('voix').value,l=speechSynthesis.getVoices().filter(v=>v.lang&&v.lang.toLowerCase().startsWith('fr'));
+$('voix').replaceChildren(new Option('Automatique',''),...l.map(v=>new Option(v.name,v.name)));
+$('voix').value=cur;
+}
+function parler(){
+if(!window.speechSynthesis)return;
+speechSynthesis.cancel();
+const u=new SpeechSynthesisUtterance($('narration').value.trim()||$('idee').value.trim());
+u.lang='fr-FR';u.rate=Number($('vitesse').value)||1;
+const v=speechSynthesis.getVoices().find(x=>x.name===$('voix').value);
+if(v)u.voice=v;
+speechSynthesis.speak(u);
+}
+function busy(b){
+occupe=b;if(b)annule=false;
+$('creer').disabled=b;
+document.querySelectorAll('.arret').forEach(x=>x.style.display=b?'block':'none');
+try{
+if(b&&navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{wl=l;}).catch(()=>{});
+if(!b&&wl){wl.release().catch(()=>{});wl=null;}
+}catch(e){}
+}
+function arreter(){annule=true;if(window.speechSynthesis)speechSynthesis.cancel();st('Arrêt…');}
+async function chargerImage(url){
+const ct=new AbortController(),to=setTimeout(()=>ct.abort(),90000);
+try{
+const r=await fetch(url,{signal:ct.signal});
+if(!r.ok)throw new Error('http '+r.status);
+const b=await r.blob();
+if(!b.type.startsWith('image/'))throw new Error('pas une image');
+const u=URL.createObjectURL(b);
+let img;
+if(window.createImageBitmap)img=await createImageBitmap(b);
+else{img=new Image();img.src=u;await img.decode();}
+return {img,url:u};
+}finally{clearTimeout(to);}
+}
+async function faireImage(i,seed){
+const prompt=`${P.idee}. ${ACT[i%ACT.length]}. Style : ${P.style}. éclairage cinématographique, sans texte, sans logo`;
+const url=`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${P.w}&height=${P.h}&seed=${seed}&nologo=true`;
+for(let t=0;t<3;t++){
+if(annule)return null;
+st(`Image ${i+1} sur ${P.nb}…`+(t?` (nouvel essai ${t})`:''));
+try{return await chargerImage(url);}catch(e){if(t<2)await pause(20000);}
+}
+return null;
+}
+async function creer(){
+if(occupe)return;
+const idee=$('idee').value.trim();
+if(!idee){st('Écris d’abord ton idée.');return;}
+if(!navigator.onLine){st('Pas de connexion internet.');return;}
+sauver();
+const [w,h]=dim(),D=Number($('dimg').value)||5,nb=Math.max(1,Math.round(Number($('duree').value)/D));
+const mots=($('narration').value.trim()||idee).split(/\s+/),par=Math.ceil(mots.length/nb);
+P={idee,w,h,nb,D,style:$('style').value,seed:Math.floor(Math.random()*1e6)};
+scenes=[];$('galerie').replaceChildren();$('montage').hidden=true;$('resultat').replaceChildren();
+busy(true);
+for(let i=0;i<nb;i++){
+const r=await faireImage(i,P.seed);
+if(!r){st(annule?'Création annulée.':`L’image ${i+1} n’a pas pu être créée. Vérifie ta connexion et réessaie.`);busy(false);return;}
+scenes.push({...r,texte:mots.slice(i*par,(i+1)*par).join(' ')});
+const im=document.createElement('img');im.src=r.url;im.alt='Image '+(i+1);im.onclick=()=>refaire(i,im);
+$('galerie').append(im);
+if(i<nb-1)await pause(16000);
+}
+st('Images prêtes. Touche une image pour la refaire, ou passe à l’étape 2.');
+$('montage').hidden=false;busy(false);
+}
+async function refaire(i,im){
+if(occupe||!scenes[i])return;
+busy(true);
+const r=await faireImage(i,Math.floor(Math.random()*1e6));
+if(r){URL.revokeObjectURL(scenes[i].url);scenes[i].img=r.img;scenes[i].url=r.url;im.src=r.url;st(`Image ${i+1} refaite.`);}
+else st(annule?'Annulé.':'Impossible de refaire cette image pour le moment.');
+busy(false);
+}
+function dessiner(ctx,w,h,s,p,mode,sous){
+const bw=s.img.width,bh=s.img.height,base=Math.max(w/bw,h/bh);
+let z=1,dx=0;
+if(mode==='zin')z=1+0.12*p;else if(mode==='zout')z=1.12-0.12*p;else if(mode==='pan')z=1.15;
+const dw=bw*base*z,dh=bh*base*z;
+if(mode==='pan')dx=(0.5-p)*(dw-w);
+ctx.globalAlpha=1;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
+ctx.globalAlpha=Math.min(1,p*8,(1-p)*8);
+ctx.drawImage(s.img,(w-dw)/2+dx,(h-dh)/2,dw,dh);
+ctx.globalAlpha=1;
+if(!sous||!s.texte)return;
+const fs=Math.round(w*0.05);ctx.font=`bold ${fs}px Arial`;ctx.textAlign='center';
+const lignes=[];let l='';
+for(const m of s.texte.split(' ')){const t=l?l+' '+m:m;if(ctx.measureText(t).width>w*0.88&&l){lignes.push(l);l=m;}else l=t;}
+lignes.push(l);
+const hb=lignes.length*fs*1.3+fs*0.4,y0=h-hb-h*0.06;
+ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(w*0.04,y0,w*0.92,hb);
+ctx.fillStyle='#fff';
+lignes.forEach((t,k)=>ctx.fillText(t,w/2,y0+fs*1.3*(k+1)-fs*0.2));
+}
+function jouer(enregistrer){
+if(!scenes.length||occupe)return;
+const c=$('cv'),[w,h]=dim();c.width=w;c.height=h;
+const ctx=c.getContext('2d'),D=(P&&P.D)||5,total=scenes.length*D,mode=$('mouvement').value,sous=$('soustitres').value==='1';
+let rec=null;const morceaux=[];
+$('resultat').replaceChildren();
+if(enregistrer){
+const mt=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
+if(!mt){st('Ce navigateur ne sait pas enregistrer la vidéo.');return;}
+try{rec=new MediaRecorder(c.captureStream(30),{mimeType:mt,videoBitsPerSecond:3000000});}
+catch(e){st('Enregistrement impossible sur cet appareil.');return;}
+rec.ondataavailable=e=>{if(e.data.size)morceaux.push(e.data);};
+rec.onstop=()=>{
+busy(false);
+if(annule){st('Fabrication annulée.');return;}
+const u=URL.createObjectURL(new Blob(morceaux,{type:'video/webm'}));
+const v=document.createElement('video');v.src=u;v.controls=true;v.playsInline=true;
+const a=document.createElement('a');a.className='link';a.href=u;a.download='studio-savoir.webm';a.textContent='⬇️ Enregistrer la vidéo';
+$('resultat').append(v,a);st('Vidéo prête.');
+};
+}
+busy(true);
+if(rec){st('Fabrication en cours… garde l’écran allumé.');rec.start();}else parler();
+const t0=performance.now();
+(function boucle(){
+const t=(performance.now()-t0)/1000;
+if(annule||t>=total){
+if(rec){rec.stop();}else{busy(false);if(annule&&window.speechSynthesis)speechSynthesis.cancel();st(annule?'Arrêté.':'');}
+return;
+}
+dessiner(ctx,w,h,scenes[Math.min(scenes.length-1,Math.floor(t/D))],(t%D)/D,mode,sous);
+requestAnimationFrame(boucle);
+})();
+}
+restaurer();
+if(window.speechSynthesis){speechSynthesis.onvoiceschanged=voix;voix();}
+CH.forEach(k=>$(k).addEventListener('change',sauver));
+document.querySelectorAll('.arret').forEach(b=>b.onclick=arreter);
+$('creer').onclick=creer;
+$('voir').onclick=()=>jouer(false);
+$('fabriquer').onclick=()=>jouer(true);
+</script>
+</body>
+</html>
